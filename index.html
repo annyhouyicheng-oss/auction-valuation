@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>競拍股價即時評估系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F7F6F2;--surface:#fff;--surface2:#F0EEE8;
+  --border:rgba(0,0,0,0.09);--border-md:rgba(0,0,0,0.18);
+  --text:#1A1917;--text2:#6B6860;--text3:#A09D96;
+  --green:#0F6E56;--green-bg:#E1F5EE;
+  --amber:#854F0B;--amber-bg:#FAEEDA;
+  --red:#791F1F;--red-bg:#FCEBEB;
+  --blue:#185FA5;--blue-bg:#E6F1FB;
+  --r:10px;--rl:14px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#141412;--surface:#1E1D1A;--surface2:#272521;
+  --border:rgba(255,255,255,0.08);--border-md:rgba(255,255,255,0.18);
+  --text:#F0EEE8;--text2:#A09D96;--text3:#6B6860;
+  --green:#5DCAA5;--green-bg:#04342C;
+  --amber:#EF9F27;--amber-bg:#412402;
+  --red:#F09595;--red-bg:#501313;
+  --blue:#85B7EB;--blue-bg:#042C53;
+}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;min-height:100vh}
+a{color:var(--blue)}
+
+/* Header */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
+.logo{font-size:15px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.header-tag{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;font-family:'DM Mono',monospace}
+
+main{max-width:920px;margin:0 auto;padding:2rem 1.5rem 5rem}
+h1{font-size:22px;font-weight:700;letter-spacing:-.03em;margin-bottom:4px}
+.subtitle{font-size:13px;color:var(--text2);margin-bottom:2rem}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem 1.5rem;margin-bottom:1.25rem}
+.card-title{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;font-family:'DM Mono',monospace;margin-bottom:1rem}
+.step-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--text);color:var(--bg);font-size:11px;font-weight:700;font-family:'DM Mono',monospace;margin-right:8px;flex-shrink:0}
+
+/* Fields */
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;color:var(--text2);font-weight:500}
+.field input,.field select{height:40px;border:1px solid var(--border-md);border-radius:var(--r);padding:0 12px;font-size:14px;font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);outline:none;transition:border-color .15s;width:100%}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+.field-hint{font-size:11px;color:var(--text3);margin-top:3px}
+.field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:1.25rem}
+
+/* Search row */
+.search-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem}
+.input-big input{font-size:20px!important;height:48px!important;font-weight:500!important;width:150px}
+
+/* Buttons */
+.btn{height:40px;padding:0 20px;border-radius:var(--r);font-size:14px;font-family:'Noto Sans TC',sans-serif;cursor:pointer;transition:opacity .15s,transform .1s;display:inline-flex;align-items:center;gap:6px;border:none;white-space:nowrap;font-weight:500}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--text);color:var(--bg);height:48px;padding:0 28px;font-size:15px}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border-md);height:40px}
+.btn-ghost:hover{background:var(--surface2)}
+.btn-sm{height:34px;padding:0 14px;font-size:13px}
+
+/* Status chips */
+.status-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 12px;border-radius:20px;font-family:'DM Mono',monospace;font-weight:500;height:34px}
+.chip-loading{background:var(--blue-bg);color:var(--blue)}
+.chip-ok{background:var(--green-bg);color:var(--green)}
+.chip-err{background:var(--red-bg);color:var(--red)}
+.chip-warn{background:var(--amber-bg);color:var(--amber)}
+.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1s ease-in-out infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* Live data chips */
+.live-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.live-chip{background:var(--surface2);border-radius:var(--r);padding:9px 13px;min-width:105px}
+.lc-label{font-size:11px;color:var(--text3);margin-bottom:3px}
+.lc-val{font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text)}
+.lc-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.lc-val.up{color:var(--red)}
+.lc-val.dn{color:var(--green)}
+.data-note{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:6px}
+
+/* Badges */
+.badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;font-family:'DM Mono',monospace;vertical-align:middle}
+.badge-safe{background:var(--green-bg);color:var(--green)}
+.badge-warn{background:var(--amber-bg);color:var(--amber)}
+.badge-danger{background:var(--red-bg);color:var(--red)}
+.badge-info{background:var(--blue-bg);color:var(--blue)}
+
+/* Verdict */
+.verdict{border-radius:var(--rl);border:1px solid var(--border);background:var(--surface);padding:1.25rem 1.5rem;margin-bottom:1.25rem;display:flex;gap:1rem;align-items:flex-start}
+.verdict.safe{border-left:3px solid var(--green);border-radius:0 var(--rl) var(--rl) 0}
+.verdict.warn{border-left:3px solid var(--amber);border-radius:0 var(--rl) var(--rl) 0}
+.verdict.danger{border-left:3px solid var(--red);border-radius:0 var(--rl) var(--rl) 0}
+.verdict-icon{font-size:20px;line-height:1;margin-top:2px;flex-shrink:0}
+.verdict-title{font-size:15px;font-weight:700;margin-bottom:4px}
+.verdict-body{font-size:13px;color:var(--text2);line-height:1.7}
+
+/* Section labels */
+.sl{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;font-family:'DM Mono',monospace;margin:1.5rem 0 10px}
+.sl:first-child{margin-top:0}
+
+/* Metrics */
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.metric{background:var(--surface2);border-radius:var(--r);padding:12px 14px}
+.m-label{font-size:11px;color:var(--text2);margin-bottom:4px}
+.m-val{font-size:19px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace}
+.m-sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;margin-bottom:1.25rem}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11px;font-weight:500;color:var(--text3);text-align:left;padding:7px 12px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;letter-spacing:.05em}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+.td-m{font-family:'DM Mono',monospace;font-weight:500}
+.r-safe .td-p{color:var(--green);font-weight:700}
+.r-warn .td-p{color:var(--amber);font-weight:700}
+.r-danger .td-p{color:var(--red);font-weight:700}
+.r-hl{background:var(--surface2)}
+
+/* Exclusion list */
+.excl-list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:1.25rem}
+.excl-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.excl-item:last-child{border-bottom:none}
+.excl-icon{font-size:15px;flex-shrink:0}
+.c-pass{color:var(--green)}
+.c-fail{color:var(--red)}
+
+/* Sell cards */
+.sell-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-bottom:1.25rem}
+.sell-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px}
+.sell-card.feat{border:2px solid var(--blue)}
+.sc-label{font-size:11px;color:var(--text2);margin-bottom:4px}
+.sc-val{font-size:17px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);margin-bottom:2px}
+.sell-card.feat .sc-val{color:var(--blue)}
+.sc-sub{font-size:11px;color:var(--text3)}
+
+/* Chart */
+.chart-wrap{position:relative;width:100%;height:280px;margin-bottom:1.5rem}
+.chart-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text2);margin-bottom:10px}
+.leg{display:flex;align-items:center;gap:5px}
+.leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.leg-line{width:18px;height:3px;flex-shrink:0}
+
+/* Misc */
+.divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
+.empty-state{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:3rem 2rem;text-align:center;color:var(--text3)}
+.empty-title{font-size:15px;font-weight:500;color:var(--text2);margin:12px 0 6px}
+.empty-body{font-size:13px;line-height:1.7}
+.api-note{background:var(--blue-bg);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--blue);margin-top:10px;font-family:'DM Mono',monospace;line-height:1.6}
+footer{text-align:center;font-size:12px;color:var(--text3);padding:2rem;border-top:1px solid var(--border);font-family:'DM Mono',monospace;line-height:1.8}
+@media(max-width:640px){
+  header{padding:0 1rem}
+  main{padding:1.25rem 1rem 3rem}
+  .input-big input{width:110px;font-size:16px!important}
+  .btn-primary{height:44px;padding:0 20px;font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-dot"></div>競拍評估系統</div>
+  <div class="header-tag">Auction Valuation v2.0</div>
+</header>
+
+<main>
+  <h1>競拍股價即時評估</h1>
+  <p class="subtitle">輸入股票代號，自動從證交所 / 櫃買中心抓取市價、本益比、EPS、日均量，再填入競拍參數即可產出完整估值報告</p>
+
+  <!-- ── STEP 1 ── -->
+  <div class="card">
+    <div class="card-title"><span class="step-badge">1</span>輸入股票代號 — 即時查詢</div>
+    <div class="search-row">
+      <div class="field input-big">
+        <label>股票代號</label>
+        <input id="stockId" type="text" placeholder="2330" maxlength="6"
+          onkeydown="if(event.key==='Enter')fetchStock()" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>市場</label>
+        <select id="mktSel" style="height:48px;width:140px">
+          <option value="auto">自動判斷</option>
+          <option value="tse">上市（TSE）</option>
+          <option value="otc">上櫃（OTC）</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="fetchStock()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        查詢即時資料
+      </button>
+      <div id="fetchStatus"></div>
+    </div>
+
+    <div id="liveSection" style="display:none">
+      <div class="live-grid" id="liveChips"></div>
+      <div class="data-note" id="dataNoteEl"></div>
+      <div class="api-note" id="apiNoteEl"></div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2 ── -->
+  <div class="card">
+    <div class="card-title"><span class="step-badge">2</span>競拍參數輸入（依競拍公告填寫）</div>
+
+    <div class="field-grid">
+      <div class="field">
+        <label>起標價（底價）★必填</label>
+        <input id="inFloor" type="number" placeholder="364.54" step="0.01" />
+        <div class="field-hint">所有錨點計算基準</div>
+      </div>
+      <div class="field">
+        <label>承銷價</label>
+        <input id="inIssue" type="number" placeholder="433.8" step="0.01" />
+        <div class="field-hint">承銷加減法計算用</div>
+      </div>
+      <div class="field">
+        <label>目前市價（可覆蓋）</label>
+        <input id="inMarket" type="number" placeholder="自動填入" step="0.01" />
+        <div class="field-hint">已由 API 自動帶入</div>
+      </div>
+      <div class="field">
+        <label>EPS 年度（可覆蓋）</label>
+        <input id="inEps" type="number" placeholder="自動填入" step="0.01" />
+        <div class="field-hint">已由 API 自動帶入</div>
+      </div>
+      <div class="field">
+        <label>產業本益比（平均）</label>
+        <input id="inPeAvg" type="number" placeholder="20" step="0.01" />
+        <div class="field-hint">手動查同產業個股</div>
+      </div>
+      <div class="field">
+        <label>產業本益比（中位數）</label>
+        <input id="inPeMed" type="number" placeholder="14.6" step="0.01" />
+      </div>
+    </div>
+
+    <div class="card-title" style="margin-top:.25rem">競拍後檢討（選填）</div>
+    <div class="field-grid">
+      <div class="field">
+        <label>實際得標均價</label>
+        <input id="inWon" type="number" placeholder="474" step="0.01" />
+      </div>
+      <div class="field">
+        <label>得標成本（含手續費）</label>
+        <input id="inCost" type="number" placeholder="自動計算" step="0.01" />
+        <div class="field-hint">空白則自動×1.05</div>
+      </div>
+    </div>
+
+    <div class="card-title" style="margin-top:.25rem">篩選條件確認</div>
+    <div class="field-grid">
+      <div class="field">
+        <label>日均量 ＞150（千張）</label>
+        <select id="inVol">
+          <option value="auto">依 API 自動判斷</option>
+          <option value="1">是（符合）</option>
+          <option value="0">否（排除）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>產業本益比 ≤20？</label>
+        <select id="inPeOk">
+          <option value="1">是（符合）</option>
+          <option value="0">否（偏高排除）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>面額 ≥10 元（興櫃前）？</label>
+        <select id="inParOk">
+          <option value="1">是（符合）</option>
+          <option value="0">否（排除）</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:1rem">
+      <button class="btn btn-primary" onclick="calculate()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+        產出完整評估報告
+      </button>
+      <button class="btn btn-ghost" onclick="resetAll()">清除重填</button>
+    </div>
+  </div>
+
+  <!-- ── RESULT ── -->
+  <div id="result">
+    <div class="empty-state">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <p class="empty-title">尚無評估結果</p>
+      <p class="empty-body">輸入股票代號查詢即時資料，填入起標價後點擊「產出完整評估報告」</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  競拍股價評估系統 v2.0 &nbsp;|&nbsp; 資料來源：臺灣證券交易所 &amp; 櫃買中心 Open API<br>
+  市價 / 本益比 / EPS 資料由 mis.twse.com.tw 及 openapi.twse.com.tw 提供 &nbsp;|&nbsp; 僅供參考，不構成投資建議
+</footer>
+
+<script>
+/* ════════════════════════════════════════════
+   State
+════════════════════════════════════════════ */
+let chartInst = null;
+let liveData = {};
+
+/* ════════════════════════════════════════════
+   Helpers
+════════════════════════════════════════════ */
+function nv(id){ return parseFloat(document.getElementById(id).value) || 0; }
+function fv(v, d=2){ return (!v || isNaN(v)) ? '—' : Number(v).toFixed(d); }
+function setStatus(html){ document.getElementById('fetchStatus').innerHTML = html; }
+function comma(n){ return n ? Number(n).toLocaleString() : '—'; }
+
+/* CORS proxy chain */
+const PROXIES = [
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://thingproxy.freeboard.io/fetch/${u}`,
+];
+
+async function proxyFetch(url) {
+  for (const px of PROXIES) {
+    try {
+      const r = await fetch(px(url), { signal: AbortSignal.timeout(9000) });
+      if (r.ok) return r;
+    } catch(_){}
+  }
+  throw new Error('無法連線至資料源，請稍後再試');
+}
+
+/* Auto-detect market */
+function detectMkt(id) {
+  const sel = document.getElementById('mktSel').value;
+  if (sel !== 'auto') return sel;
+  const num = parseInt(id);
+  if (isNaN(num)) return 'otc';
+  // TSE: 1000–6999 主要上市; OTC: 7000+ or starts non-numeric treated as otc
+  return (num >= 1000 && num < 7000) ? 'tse' : 'otc';
+}
+
+/* ════════════════════════════════════════════
+   STEP 1 — Fetch live stock data
+════════════════════════════════════════════ */
+async function fetchStock() {
+  const id = document.getElementById('stockId').value.trim();
+  if (!id) { alert('請輸入股票代號'); return; }
+
+  setStatus(`<span class="status-chip chip-loading"><span class="pulse"></span>查詢中...</span>`);
+  document.getElementById('liveSection').style.display = 'none';
+  liveData = {};
+
+  try {
+    // Try TSE first, then OTC, based on auto detect
+    const mkt = detectMkt(id);
+    const result = await tryFetchMIS(id, mkt);
+
+    if (!result) {
+      // Try the other market
+      const other = mkt === 'tse' ? 'otc' : 'tse';
+      const result2 = await tryFetchMIS(id, other);
+      if (!result2) throw new Error(`找不到股票代號 ${id}，請確認代號或選擇市場別`);
+      processLive(id, result2, other);
+    } else {
+      processLive(id, result, mkt);
+    }
+
+    // Async: fetch volume history (don't block UI)
+    fetchVolHistory(id, liveData.ex).catch(() => {});
+
+    setStatus(`<span class="status-chip chip-ok">✓ 資料已更新 ${new Date().toLocaleTimeString('zh-TW')}</span>`);
+  } catch(e) {
+    setStatus(`<span class="status-chip chip-err">✕ ${e.message}</span>`);
+    // Show manual input hint
+    document.getElementById('liveSection').style.display = 'block';
+    document.getElementById('liveChips').innerHTML = '';
+    document.getElementById('dataNoteEl').textContent = '';
+    document.getElementById('apiNoteEl').textContent = '⚠ 無法自動取得資料。請手動填入下方「目前市價」和「EPS」欄位。';
+  }
+}
+
+async function tryFetchMIS(id, mkt) {
+  const ex = mkt === 'tse' ? 'tse' : 'otc';
+  const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${ex}_${id}.tw&json=1&delay=0&_=${Date.now()}`;
+  try {
+    const r = await proxyFetch(url);
+    const j = await r.json();
+    if (j.msgArray && j.msgArray.length > 0 && j.msgArray[0].c) return j.msgArray[0];
+  } catch(_){}
+  return null;
+}
+
+function processLive(id, d, ex) {
+  const price    = parseFloat(d.z) > 0 ? parseFloat(d.z) : parseFloat(d.y); // z=last trade, y=prev close
+  const prevClose= parseFloat(d.y) || 0;
+  const open     = parseFloat(d.o) || 0;
+  const high     = parseFloat(d.h) || 0;
+  const low      = parseFloat(d.l) || 0;
+  const pe       = parseFloat(d.pe) || 0;
+  const eps      = parseFloat(d.eps) || 0;
+  const name     = d.n || id;
+  const chg      = price && prevClose ? ((price - prevClose) / prevClose * 100) : 0;
+
+  liveData = { id, name, price, prevClose, open, high, low, pe, eps, ex };
+
+  // Auto-fill inputs
+  if (price)  document.getElementById('inMarket').value = price.toFixed(2);
+  if (eps)    document.getElementById('inEps').value    = eps.toFixed(2);
+
+  // Render chips
+  const dir = chg > 0 ? 'up' : chg < 0 ? 'dn' : '';
+  const chgStr = (chg > 0 ? '+' : '') + chg.toFixed(2) + '%';
+  const diffStr = price && prevClose ? ((chg > 0 ? '+' : '') + (price - prevClose).toFixed(2)) : '';
+
+  document.getElementById('liveChips').innerHTML = `
+    <div class="live-chip" style="min-width:160px">
+      <div class="lc-label">${name}（${id}）</div>
+      <div class="lc-val" style="font-size:13px;margin-top:2px">${ex.toUpperCase()} ${ex==='tse'?'上市':'上櫃'}</div>
+    </div>
+    <div class="live-chip">
+      <div class="lc-label">即時成交價</div>
+      <div class="lc-val ${dir}">${price ? fv(price) : '未交易'}</div>
+      <div class="lc-sub">${diffStr ? diffStr + ' (' + chgStr + ')' : ''}</div>
+    </div>
+    <div class="live-chip">
+      <div class="lc-label">昨收 / 開盤</div>
+      <div class="lc-val">${fv(prevClose)} / ${open||'—'}</div>
+    </div>
+    <div class="live-chip">
+      <div class="lc-label">最高 / 最低</div>
+      <div class="lc-val">${high||'—'} / ${low||'—'}</div>
+    </div>
+    <div class="live-chip">
+      <div class="lc-label">本益比（PE）</div>
+      <div class="lc-val">${pe ? fv(pe,1) : '—'}</div>
+    </div>
+    <div class="live-chip">
+      <div class="lc-label">EPS（年）</div>
+      <div class="lc-val">${eps ? fv(eps) : '—'}</div>
+    </div>
+    <div class="live-chip" id="volChip">
+      <div class="lc-label">6月日均量</div>
+      <div class="lc-val" style="font-size:13px">計算中...</div>
+    </div>
+  `;
+  document.getElementById('dataNoteEl').textContent = `更新：${new Date().toLocaleTimeString('zh-TW')}　來源：mis.twse.com.tw`;
+  document.getElementById('apiNoteEl').textContent  = '✓ 市價與 EPS 已自動帶入下方欄位，可手動調整';
+  document.getElementById('liveSection').style.display = 'block';
+}
+
+/* ════════════════════════════════════════════
+   Volume history (6 months avg daily)
+════════════════════════════════════════════ */
+async function fetchVolHistory(id, ex) {
+  const now = new Date();
+  let totalDays = 0, totalVol = 0;
+
+  for (let m = 0; m < 6; m++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const yyyymmdd = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}01`;
+    const yyyymm   = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}`;
+    try {
+      let rows = [];
+      if (ex === 'tse') {
+        const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${yyyymmdd}&stockNo=${id}`;
+        const r = await proxyFetch(url);
+        const j = await r.json();
+        rows = j.data || [];
+        rows.forEach(row => {
+          const v = parseFloat((row[1]||'').replace(/,/g,''));
+          if (!isNaN(v) && v > 0) { totalVol += v / 1000; totalDays++; } // convert shares → lots (千股)
+        });
+      } else {
+        const url = `https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=${yyyymm}&stkno=${id}&s=0,asc,0&o=json`;
+        const r = await proxyFetch(url);
+        const j = await r.json();
+        rows = j.aaData || [];
+        rows.forEach(row => {
+          const v = parseFloat((row[1]||'').replace(/,/g,''));
+          if (!isNaN(v) && v > 0) { totalVol += v; totalDays++; }
+        });
+      }
+    } catch(_) {}
+  }
+
+  const chip = document.getElementById('volChip');
+  if (!chip) return;
+  if (totalDays > 0) {
+    const avg = Math.round(totalVol / totalDays);
+    const ok  = avg >= 150;
+    liveData.avgVol = avg;
+    chip.innerHTML = `
+      <div class="lc-label">6月日均量（張）</div>
+      <div class="lc-val ${ok ? '' : 'up'}">${comma(avg)}</div>
+      <div class="lc-sub" style="color:${ok?'var(--green)':'var(--red)'}">${ok ? '✓ 符合篩選' : '✕ 低於150，排除'}</div>
+    `;
+    // Auto-set vol selector
+    const sel = document.getElementById('inVol');
+    if (sel.value === 'auto') sel.value = ok ? '1' : '0';
+  } else {
+    chip.innerHTML = `<div class="lc-label">6月日均量</div><div class="lc-val" style="font-size:12px;color:var(--text3)">無法取得</div>`;
+  }
+}
+
+/* ════════════════════════════════════════════
+   STEP 2 — Calculate & render report
+════════════════════════════════════════════ */
+function calculate() {
+  const name    = (liveData.name || document.getElementById('stockId').value || '該股').trim();
+  const floor   = nv('inFloor');
+  const issue   = nv('inIssue');
+  const market  = nv('inMarket');
+  const eps     = nv('inEps');
+  const peAvg   = nv('inPeAvg');
+  const peMed   = nv('inPeMed');
+  const won     = nv('inWon');
+  const costIn  = nv('inCost');
+
+  if (!floor) { alert('請填入起標價（底價）'); return; }
+
+  const cost = costIn || (won ? +(won * 1.05).toFixed(2) : 0);
+
+  // Anchors
+  const v12=floor*1.2, v13=floor*1.3, v14=floor*1.4,
+        v15=floor*1.5, v18=floor*1.8, v20=floor*2.0;
+  const vm75=market?market*0.75:null, vm80=market?market*0.80:null, vm82=market?market*0.82:null;
+  const vi20=issue?issue+20:null, vi30=issue?issue+30:null;
+  const waterlogged = market > 0 && market > v18;
+
+  // Sell targets
+  const wonRatio  = won > 0 ? won/floor : null;
+  const sell115   = won  ? won*1.15  : null;
+  const sell121   = won  ? won*1.21  : null;
+  const sellC115  = cost ? cost*1.15 : null;
+  const sellC160  = cost ? cost*1.60 : null;
+
+  // PE valuation
+  const peStock     = eps > 0 && market > 0 ? market/eps : (liveData.pe || null);
+  const byPeAvg     = eps > 0 && peAvg > 0  ? eps*peAvg  : null;
+  const byPeMed     = eps > 0 && peMed > 0  ? eps*peMed  : null;
+
+  // Exclusion checks
+  const volSelVal = document.getElementById('inVol').value;
+  const volOk = volSelVal === 'auto'
+    ? (liveData.avgVol !== undefined ? liveData.avgVol >= 150 : true)
+    : volSelVal === '1';
+  const peOk  = document.getElementById('inPeOk').value  === '1';
+  const parOk = document.getElementById('inParOk').value === '1';
+
+  const excl = [
+    {
+      label: `日均量（6個月）≥ 150 張${liveData.avgVol !== undefined ? `　（抓取值：${comma(liveData.avgVol)} 張）` : ''}`,
+      pass: volOk
+    },
+    { label: `產業本益比均值 ≤ 20`, pass: peOk },
+    { label: `市價未灌水（市價 ≤ 起標×1.8 = NT$${fv(v18)}）${market ? `　（市價：NT$${fv(market)}）` : ''}`, pass: !waterlogged },
+    { label: `興櫃前面額 ≥ 10 元`, pass: parOk },
+  ];
+  const excluded = excl.some(e => !e.pass);
+
+  // Verdict
+  let vClass, vIcon, vTitle, vBody;
+  if (excluded) {
+    vClass='danger'; vIcon='✕';
+    vTitle = `建議排除：${name}`;
+    vBody  = `依競拍篩選規則，以下條件不符：<strong>${excl.filter(e=>!e.pass).map(e=>e.label.split('　')[0]).join('、')}</strong>。建議跳過此次競拍，保留資金等待更好機會。`;
+  } else if (wonRatio && wonRatio > 1.6) {
+    vClass='warn'; vIcon='△';
+    vTitle = `謹慎：${name} 得標均價偏高`;
+    vBody  = `得標均價為起標價的 <strong>${wonRatio.toFixed(2)} 倍</strong>，已超出建議區間（×1.5）。以得標成本×1.15為保守目標，嚴格控制持倉風險。`;
+  } else if (wonRatio && wonRatio <= 1.3) {
+    vClass='safe'; vIcon='◎';
+    vTitle = `優質：${name} 得標價位理想`;
+    vBody  = `得標均價為起標價的 <strong>${wonRatio.toFixed(2)} 倍</strong>，處於理想區間（≤×1.3）。若屬低本益比、高EPS、KY股，可設定成本×1.6為賣出目標。`;
+  } else {
+    vClass='warn'; vIcon='○';
+    vTitle = `一般：${name} 各項指標正常`;
+    vBody  = won
+      ? `得標均價為起標價的 <strong>${wonRatio.toFixed(2)} 倍</strong>，在合理範圍。建議以得標均價×<strong>1.15～1.21</strong>作為掛牌前5日出場目標。`
+      : `各篩選條件通過，可參與競拍。填入得標均價後可產出賣出策略。`;
+  }
+
+  // Chart data
+  const cLabels = ['×1.2', '×1.3', '×1.4', '×1.5 上限', '×1.8 灌水', '×2.0 絕對'];
+  const cData   = [v12, v13, v14, v15, v18, v20];
+  const cColors = ['#1D9E75','#1D9E75','#1D9E75','#BA7517','#E24B4A','#A32D2D'];
+  if (vm80) { cLabels.splice(3,0,'市×0.80'); cData.splice(3,0,vm80); cColors.splice(3,0,'#5B9BD5'); }
+
+  // ── Render ──
+  document.getElementById('result').innerHTML = `
+    <div class="sl" style="margin-top:0">綜合評估裁定</div>
+    <div class="verdict ${vClass}">
+      <div class="verdict-icon">${vIcon}</div>
+      <div>
+        <div class="verdict-title">${vTitle}</div>
+        <div class="verdict-body">${vBody}</div>
+      </div>
+    </div>
+
+    <div class="sl">篩選資格檢核</div>
+    <div class="excl-list">
+      ${excl.map(e=>`
+      <div class="excl-item">
+        <span class="excl-icon ${e.pass?'c-pass':'c-fail'}">${e.pass?'✓':'✕'}</span>
+        <span style="${e.pass?'':'color:var(--red)'}">${e.label}</span>
+        <span class="badge ${e.pass?'badge-safe':'badge-danger'}" style="margin-left:auto">${e.pass?'符合':'不符'}</span>
+      </div>`).join('')}
+    </div>
+
+    <div class="sl">即時市場資料 × 競拍參數</div>
+    <div class="metric-grid">
+      <div class="metric"><div class="m-label">股票名稱</div><div class="m-val" style="font-size:15px">${name}</div><div class="m-sub">${liveData.ex?liveData.ex.toUpperCase()+' '+(liveData.ex==='tse'?'上市':'上櫃'):''}</div></div>
+      <div class="metric"><div class="m-label">即時市價</div><div class="m-val">${market?fv(market):'—'}</div><div class="m-sub">${waterlogged?'⚠ 市價灌水':'NT$'}</div></div>
+      <div class="metric"><div class="m-label">起標價（底價）</div><div class="m-val">${fv(floor)}</div><div class="m-sub">NT$</div></div>
+      <div class="metric"><div class="m-label">承銷價</div><div class="m-val">${issue?fv(issue):'—'}</div><div class="m-sub">NT$</div></div>
+      <div class="metric"><div class="m-label">EPS（年度）</div><div class="m-val">${eps?fv(eps):'—'}</div><div class="m-sub">NT$</div></div>
+      <div class="metric"><div class="m-label">目前本益比</div><div class="m-val">${peStock?fv(peStock,1):'—'}</div><div class="m-sub">倍</div></div>
+    </div>
+
+    <div class="sl">完整定價錨點</div>
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>錨點說明</th><th>價格（NT$）</th><th>評級</th><th>使用情境</th></tr></thead>
+      <tbody>
+        <tr class="r-safe"><td>起標 ×1.2</td><td class="td-m td-p">${fv(v12)}</td><td><span class="badge badge-safe">保守</span></td><td style="color:var(--text2);font-size:12px">謹慎起標、少量嘗試</td></tr>
+        <tr class="r-safe"><td>起標 ×1.3</td><td class="td-m td-p">${fv(v13)}</td><td><span class="badge badge-safe">理想下限</span></td><td style="color:var(--text2);font-size:12px">估值區間下緣</td></tr>
+        <tr class="r-safe"><td>起標 ×1.4</td><td class="td-m td-p">${fv(v14)}</td><td><span class="badge badge-safe">理想上限</span></td><td style="color:var(--text2);font-size:12px">估值區間上緣</td></tr>
+        <tr class="r-warn r-hl"><td>起標 ×1.5</td><td class="td-m td-p">${fv(v15)}</td><td><span class="badge badge-warn">建議上限</span></td><td style="color:var(--text2);font-size:12px">一般情形不超過此值</td></tr>
+        ${vm75?`<tr><td>市價 ×0.75</td><td class="td-m">${fv(vm75)}</td><td><span class="badge badge-info">市價折扣</span></td><td style="color:var(--text2);font-size:12px">市價保守折扣參考</td></tr>`:''}
+        ${vm80?`<tr><td>市價 ×0.80</td><td class="td-m">${fv(vm80)}</td><td><span class="badge badge-info">市價折扣</span></td><td style="color:var(--text2);font-size:12px">市價中度折扣參考</td></tr>`:''}
+        ${vm82?`<tr><td>市價 ×0.82</td><td class="td-m">${fv(vm82)}</td><td><span class="badge badge-warn">市價折扣</span></td><td style="color:var(--text2);font-size:12px">市價高折扣（注意）</td></tr>`:''}
+        ${vi20?`<tr><td>承銷價 ＋20</td><td class="td-m">${fv(vi20)}</td><td></td><td style="color:var(--text2);font-size:12px">承銷加減法下限</td></tr>`:''}
+        ${vi30?`<tr><td>承銷價 ＋30</td><td class="td-m">${fv(vi30)}</td><td></td><td style="color:var(--text2);font-size:12px">承銷加減法上限</td></tr>`:''}
+        <tr class="r-warn"><td>起標 ×1.8</td><td class="td-m td-p">${fv(v18)}</td><td><span class="badge badge-warn">灌水警戒</span></td><td style="color:var(--text2);font-size:12px">市價超過此值排除</td></tr>
+        <tr class="r-danger"><td>起標 ×2.0</td><td class="td-m td-p">${fv(v20)}</td><td><span class="badge badge-danger">絕對上限</span></td><td style="color:var(--text2);font-size:12px">任何情況不超過</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    ${eps > 0 && (peAvg > 0 || peMed > 0) ? `
+    <div class="sl">本益比法估值</div>
+    <div class="metric-grid">
+      ${peStock?`<div class="metric"><div class="m-label">目前本益比</div><div class="m-val">${fv(peStock,1)}</div><div class="m-sub">市價 ÷ EPS</div></div>`:''}
+      ${byPeAvg?`<div class="metric"><div class="m-label">均值PE估價</div><div class="m-val">${fv(byPeAvg)}</div><div class="m-sub">EPS × ${fv(peAvg,1)}</div></div>`:''}
+      ${byPeMed?`<div class="metric"><div class="m-label">中位數PE估價</div><div class="m-val">${fv(byPeMed)}</div><div class="m-sub">EPS × ${fv(peMed,1)}</div></div>`:''}
+      ${byPeAvg?`<div class="metric"><div class="m-label">保守估價（×0.7）</div><div class="m-val">${fv(eps*peAvg*0.7)}</div><div class="m-sub">折扣後參考</div></div>`:''}
+    </div>` : ''}
+
+    ${won > 0 ? `
+    <div class="divider"></div>
+    <div class="sl">競拍後 — 賣出策略</div>
+    <div class="metric-grid">
+      <div class="metric"><div class="m-label">得標均價</div><div class="m-val">${fv(won)}</div><div class="m-sub">起標 ×${wonRatio?wonRatio.toFixed(2):'—'}</div></div>
+      <div class="metric"><div class="m-label">得標成本（含費）</div><div class="m-val">${fv(cost)}</div><div class="m-sub">約含5%費用</div></div>
+      <div class="metric"><div class="m-label">損益平衡</div><div class="m-val">${fv(cost)}</div><div class="m-sub">需超過此值獲利</div></div>
+    </div>
+    <div class="sell-grid">
+      <div class="sell-card"><div class="sc-label">一般出場 — 均價×1.15</div><div class="sc-val">${fv(sell115)}</div><div class="sc-sub">掛牌前5日首選</div></div>
+      <div class="sell-card"><div class="sc-label">一般出場 — 均價×1.21</div><div class="sc-val">${fv(sell121)}</div><div class="sc-sub">掛牌前5日上限</div></div>
+      <div class="sell-card"><div class="sc-label">保守出場 — 成本×1.15</div><div class="sc-val">${fv(sellC115)}</div><div class="sc-sub">穩健獲利出場</div></div>
+      <div class="sell-card feat"><div class="sc-label">優質目標 — 成本×1.60</div><div class="sc-val">${fv(sellC160)}</div><div class="sc-sub">低PE + 高EPS + KY 適用</div></div>
+    </div>` : ''}
+
+    <div class="sl">估值錨點視覺化</div>
+    <div class="chart-legend">
+      <span class="leg"><span class="leg-dot" style="background:#1D9E75"></span>安全區間</span>
+      <span class="leg"><span class="leg-dot" style="background:#BA7517"></span>警示</span>
+      <span class="leg"><span class="leg-dot" style="background:#E24B4A"></span>排除</span>
+      ${market?`<span class="leg"><span class="leg-line" style="background:#378ADD"></span>即時市價</span>`:''}
+      ${won?`<span class="leg"><span class="leg-line" style="background:#7F77DD;border-top:2px dashed #7F77DD;background:none;border-bottom:none"></span>得標均價</span>`:''}
+    </div>
+    <div class="chart-wrap">
+      <canvas id="priceChart"></canvas>
+    </div>
+  `;
+
+  // ── Chart ──
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  const datasets = [{ label:'估值錨點', data:cData, backgroundColor:cColors, borderWidth:0, borderRadius:5 }];
+  if (market) datasets.push({ label:'即時市價', data:cData.map(()=>market), type:'line', borderColor:'#378ADD', borderWidth:2, pointRadius:0, fill:false });
+  if (won)    datasets.push({ label:'得標均價', data:cData.map(()=>won),    type:'line', borderColor:'#7F77DD', borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false });
+
+  const dark = matchMedia('(prefers-color-scheme:dark)').matches;
+  const tc = dark ? '#6B6860' : '#A09D96';
+  const gc = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+
+  chartInst = new Chart(document.getElementById('priceChart'), {
+    type:'bar', data:{ labels:cLabels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ' NT$' + (ctx.parsed.y||0).toFixed(2) }}},
+      scales:{
+        x:{ ticks:{ color:tc, font:{ size:11, family:"'DM Mono',monospace" }}, grid:{ display:false }},
+        y:{ ticks:{ color:tc, font:{ size:11, family:"'DM Mono',monospace" }, callback: v => 'NT$'+Number(v).toFixed(0)}, grid:{ color:gc }}
+      }
+    }
+  });
+
+  document.getElementById('result').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ── Reset ── */
+function resetAll() {
+  ['stockId','inFloor','inIssue','inMarket','inEps','inPeAvg','inPeMed','inWon','inCost'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('inVol').value   = 'auto';
+  document.getElementById('inPeOk').value  = '1';
+  document.getElementById('inParOk').value = '1';
+  document.getElementById('fetchStatus').innerHTML = '';
+  document.getElementById('liveSection').style.display = 'none';
+  document.getElementById('result').innerHTML = `
+    <div class="empty-state">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <p class="empty-title">尚無評估結果</p>
+      <p class="empty-body">輸入股票代號查詢即時資料，填入起標價後點擊「產出完整評估報告」</p>
+    </div>`;
+  liveData = {};
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+}
+</script>
+</body>
+</html>
