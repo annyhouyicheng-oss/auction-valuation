@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#0D0C0A"/>
+
+  <!-- Grid lines -->
+  <line x1="256" y1="60" x2="256" y2="452" stroke="#C9A84C" stroke-width="1" stroke-opacity="0.15"/>
+  <line x1="60" y1="256" x2="452" y2="256" stroke="#C9A84C" stroke-width="1" stroke-opacity="0.15"/>
+  <line x1="110" y1="110" x2="402" y2="402" stroke="#C9A84C" stroke-width="1" stroke-opacity="0.10"/>
+  <line x1="402" y1="110" x2="110" y2="402" stroke="#C9A84C" stroke-width="1" stroke-opacity="0.10"/>
+
+  <!-- Radar circles -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-opacity="0.2"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-opacity="0.25"/>
+  <circle cx="256" cy="256" r="70" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-opacity="0.3"/>
+
+  <!-- Radar sweep glow -->
+  <defs>
+    <radialGradient id="sweepGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E8C96B" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#C9A84C" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Sweep sector -->
+  <path d="M256,256 L256,86 A170,170 0 0,1 406,206 Z" fill="url(#sweepGlow)"/>
+
+  <!-- Chart bars (auction price anchors visual) -->
+  <rect x="130" y="310" width="32" height="60" rx="4" fill="#1A7A5E" fill-opacity="0.85"/>
+  <rect x="174" y="290" width="32" height="80" rx="4" fill="#1A7A5E" fill-opacity="0.85"/>
+  <rect x="218" y="270" width="32" height="100" rx="4" fill="#C9A84C" fill-opacity="0.9"/>
+  <rect x="262" y="255" width="32" height="115" rx="4" fill="#C9A84C" fill-opacity="0.9"/>
+  <rect x="306" y="240" width="32" height="130" rx="4" fill="#C0392B" fill-opacity="0.85"/>
+  <rect x="350" y="230" width="32" height="140" rx="4" fill="#C0392B" fill-opacity="0.85"/>
+
+  <!-- Trend line over bars -->
+  <polyline points="146,305 190,282 234,262 278,248 322,232 366,222"
+    fill="none" stroke="#E8C96B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Dots on trend line -->
+  <circle cx="146" cy="305" r="5" fill="#E8C96B"/>
+  <circle cx="190" cy="282" r="5" fill="#E8C96B"/>
+  <circle cx="234" cy="262" r="5" fill="#E8C96B"/>
+  <circle cx="278" cy="248" r="5" fill="#E8C96B"/>
+  <circle cx="322" cy="232" r="5" fill="#E8C96B"/>
+  <circle cx="366" cy="222" r="5" fill="#E8C96B"/>
+
+  <!-- Center dot (radar origin) -->
+  <circle cx="256" cy="256" r="10" fill="url(#centerGlow)"/>
+  <circle cx="256" cy="256" r="5" fill="#F5E4A8"/>
+
+  <!-- Gold border ring -->
+  <circle cx="256" cy="256" r="246" fill="none" stroke="#C9A84C" stroke-width="2.5" stroke-opacity="0.4"/>
+</svg>
